@@ -3,29 +3,37 @@ package com.dzavorin.todo.persistence
 import org.joda.time.LocalDate
 import java.util.UUID
 
-import com.dzavorin.todo.{Todo, TodoWithUser, User}
+import com.dzavorin.todo.model._
 import slick.jdbc.H2Profile.api._
 import com.dzavorin.todo.persistence.Todos._
 import com.dzavorin.todo.persistence.Users._
+import com.dzavorin.todo.persistence.Teams._
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
 
-class PersistenceService {
-  import scala.concurrent.ExecutionContext.Implicits.global
-  lazy val db = Database.forConfig("db")
+trait ImplicitDatabase {
+  protected[this] implicit def db: Database
+  protected[this] implicit def ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+}
+
+class PersistenceService extends TodosQueries
+                            with UsersQueries
+                            with TeamsQueries {
+
+  implicit lazy val db = Database.forConfig("db")
 
   def createSchema() = db.run(
     DBIO.seq((
-      users.schema ++
-        todos.schema
+      users.schema ++ todos.schema ++ teams.schema
       ).create
     ))
 
   def truncate() = db.run(
     DBIO.seq(
       todos.delete,
-      users.delete
+      users.delete,
+      teams.delete
     ))
 
   def createDataset() = Await.result({
@@ -36,9 +44,9 @@ class PersistenceService {
     db.run(
       DBIO.seq(
         users ++= Seq(
-          new User(userOneId, "Alex", "Software Engineer"),
-          new User(userTwoId, "Konstantin", "Team Lead"),
-          new User(userThreeId, "Pavel", "Scrum Master")
+          new User(userOneId, "Alex", "Software Engineer", None),
+          new User(userTwoId, "Konstantin", "Team Lead", None),
+          new User(userThreeId, "Pavel", "Scrum Master", None)
         ),
 
         todos ++= Seq(
@@ -48,35 +56,5 @@ class PersistenceService {
         )
       ))
   }, Duration.Inf)
-
-  def findAllTodos = {
-    val query = for {(todo, user) <- todos joinLeft users on (_.userId === _.id)} yield (todo, user)
-    db.run(query.result)
-      .map(_.map { case (t, u) => TodoWithUser(t.id, t.title, t.status, t.url, t.created, u)})
-  }
-
-  def findTodoById(id: UUID) = {
-    val query = for {(todo, user) <- todos.filter { _.id === id} joinLeft users on (_.userId === _.id)} yield (todo, user)
-    db.run(query.result.headOption)
-      .map(_.map { case (t, u) => TodoWithUser(t.id, t.title, t.status, t.url, t.created, u)})
-  }
-
-  def saveTodo(todo: Todo) = {
-    db.run(todos += todo) map {_ => todo}
-  }
-
-  def findAllUsers = {
-    val query = for { user <- users } yield user
-    db.run(query.result)
-  }
-
-  def findUserById(id: UUID) = {
-    val query = for (user <- users.filter { _.id === id} ) yield user
-    db.run(query.result.headOption)
-  }
-
-  def saveUser(user: User) = {
-    db.run(users += user) map {_ => user}
-  }
 
 }

@@ -1,17 +1,11 @@
-package com.dzavorin.todo
-
+package com.dzavorin.todo.model
 
 import java.time.format.DateTimeParseException
-
-import org.joda.time.LocalDate
 import java.util.UUID
 
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
-import io.circe.generic.semiauto._
-
-case class User(id: UUID,
-                fullname: String,
-                jobTitle: String)
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+import org.joda.time.LocalDate
 
 abstract sealed class TodoBase(id: UUID,
                                title: String,
@@ -33,6 +27,16 @@ case class TodoWithUser(id: UUID,
                         created: LocalDate,
                         user: Option[User]) extends TodoBase(id, title, status, url, created)
 
+object Todo extends LocalDateCirce {
+  implicit lazy val todoDecoder: Decoder[Todo] = deriveDecoder
+  implicit lazy val todoEncoder: Encoder[Todo] = deriveEncoder
+}
+
+object TodoWithUser extends LocalDateCirce {
+  implicit lazy val todoWithUserDecoder: Decoder[TodoWithUser] = deriveDecoder
+  implicit lazy val todoWithUserEncoder: Encoder[TodoWithUser] = deriveEncoder
+}
+
 trait LocalDateCirce {
   implicit final val decodeDuration: Decoder[LocalDate] =
     Decoder.instance { c =>
@@ -46,19 +50,4 @@ trait LocalDateCirce {
 
   implicit final val encodeDuration: Encoder[LocalDate] =
     Encoder.instance(duration => Json.fromString(duration.toString))
-}
-
-object Todo extends LocalDateCirce {
-  implicit lazy val todoDecoder: Decoder[Todo] = deriveDecoder
-  implicit lazy val todoEncoder: Encoder[Todo] = deriveEncoder
-}
-
-object User {
-  implicit lazy val userDecoder: Decoder[User] = deriveDecoder
-  implicit lazy val userEncoder: Encoder[User] = deriveEncoder
-}
-
-object TodoWithUser extends LocalDateCirce {
-  implicit lazy val todoWithUserDecoder: Decoder[TodoWithUser] = deriveDecoder
-  implicit lazy val todoWithUserEncoder: Encoder[TodoWithUser] = deriveEncoder
 }

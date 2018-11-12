@@ -1,5 +1,6 @@
 package com.dzavorin.todo
 
+import com.dzavorin.todo.model._
 import com.dzavorin.todo.persistence.PersistenceService
 import io.finch.{Application, Input}
 import utest._

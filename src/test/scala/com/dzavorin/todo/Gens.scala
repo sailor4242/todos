@@ -1,5 +1,6 @@
 package com.dzavorin.todo
 
+import com.dzavorin.todo.model._
 import org.joda.time.LocalDate
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
@@ -29,7 +30,7 @@ trait Gens {
     id <- Gen.uuid
     fullname <- string64
     jobTitle <- string64
-  } yield User(id, fullname, jobTitle)
+  } yield User(id, fullname, jobTitle, None)
 
   implicit val arbUser: Arbitrary[User] = Arbitrary(genUser)
 
